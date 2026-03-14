@@ -77,14 +77,14 @@ Never delete rows. Failed parses still get logged with `employee_name` and `otp_
 **POST /sms** — Kotlin bridge calls this
 
 ```json
-{"sender": "+971...", "body": "Ahmed, your OTP is 482910"}
+{"sender": "+971...", "body": "Ajmal, your OTP is 482910"}
 ```
 
 **GET /stream** — Browser connects here for SSE
 
 ```
 event: otp
-data: {"employee_name": "Ahmed", "otp_code": "482910"}
+data: {"employee_name": "Ajmal", "otp_code": "482910"}
 ```
 
 **GET /** — Serves the React frontend
@@ -115,7 +115,7 @@ Test without tablet:
 ```bash
 curl -X POST http://localhost:8080/sms \
   -H "Content-Type: application/json" \
-  -d '{"sender": "+971500000000", "body": "Ahmed your OTP is 482910"}'
+  -d '{"sender": "+971500000000", "body": "Ajmal your OTP is 482910"}'
 ```
 
 ---
@@ -129,7 +129,7 @@ Keep it dumb for now:
 - If parse fails, log it anyway with NULLs
 
 ```python
-EMPLOYEES = ["Ahmed", "Fatima", "Omar", "Sara", "Hassan"]
+EMPLOYEES = ["Ajmal", "Fatima", "Omar", "Sara", "Hassan"]
 ```
 
 Refine the parser once you see real SMS formats.

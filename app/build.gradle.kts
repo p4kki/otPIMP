@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "com.nesto.otpimp"
     compileSdk {
-        version = release(36)
+        version = release(34)
     }
 
     defaultConfig {
@@ -40,6 +40,7 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation("org.nanohttpd:nanohttpd:2.3.1") 
     implementation(libs.material)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

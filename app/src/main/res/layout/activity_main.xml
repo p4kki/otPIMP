@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="#161a20">
+
+    <TextView
+        android:text="OTP Forwarder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="22sp"
+        android:textColor="#3b82f6"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="32dp"/>
+
+    <!-- Server status -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="○ Checking…"
+        android:textSize="16sp"
+        android:textColor="#c8d0db"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Local IP for employees to bookmark -->
+    <TextView
+        android:id="@+id/tvIp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="http://?.?.?.?:8080"
+        android:textSize="14sp"
+        android:textColor="#22c55e"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- SMS permission status -->
+    <TextView
+        android:id="@+id/tvPermissions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Checking permissions…"
+        android:textSize="13sp"
+        android:textColor="#c8d0db"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="32dp"/>
+
+    <!-- Manual start/stop -->
+    <Button
+        android:id="@+id/btnToggle"
+        android:layout_width="160dp"
+        android:layout_height="wrap_content"
+        android:text="Start"
+        android:backgroundTint="#3b82f6"/>
+
+</LinearLayout>

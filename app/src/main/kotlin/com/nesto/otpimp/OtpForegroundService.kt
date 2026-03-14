@@ -12,12 +12,16 @@ import androidx.core.app.NotificationCompat
 class OtpForegroundService : Service() {
 
     companion object {
+    var isRunning = false
+    }
+    companion object {
         const val CHANNEL_ID = "otp_server_channel"
         const val NOTIFICATION_ID = 1
     }
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
         OtpServer.start()
@@ -30,6 +34,7 @@ class OtpForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        isRunning = false
         OtpServer.stop()
         super.onDestroy()
     }

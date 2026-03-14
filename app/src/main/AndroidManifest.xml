@@ -16,7 +16,6 @@
     <!-- Required on Android 12+ to start foreground service from background -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
-    <!-- Boot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- NanoHTTPD opens a server socket on port 8080 -->
@@ -38,13 +37,14 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-
-        <!--
-            SmsReceiver: intercepts every incoming SMS.
-            priority="999" ensures we get it before the system SMS app on
-            Samsung/Xiaomi ROMs that intercept broadcasts early.
-            exported="true" required on Android 12+.
-        -->
+        <activity
+        android:name=".MainActivity"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        </activity>
         <receiver
             android:name=".SmsReceiver"
             android:exported="true"

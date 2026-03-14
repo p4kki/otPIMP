@@ -174,7 +174,7 @@ CREATE TABLE failed_parse (
 ### Kotlin SMS bridge
 - Registered in `AndroidManifest.xml` to receive `android.provider.Telephony.SMS_RECEIVED`
 - On receive: concatenate all SMS parts, POST to `http://127.0.0.1:8080/internal/sms`
-- Body: `{ "sender": "+971...", "body": "Your OTP for Ahmed Al-... is 482910" }`
+- Body: `{ "sender": "+971...", "body": "Your OTP for Ajmal Al-... is 482910" }`
 - No retry logic needed in alpha — local loopback is effectively instant
 
 ### FastAPI internal endpoint security
@@ -226,7 +226,7 @@ Mock SMS injection for testing (no tablet needed):
 curl -X POST http://localhost:8080/internal/sms \
   -H "Content-Type: application/json" \
   -H "X-Internal-Token: dev-secret" \
-  -d '{"sender": "+97150000000", "body": "Dear Ahmed, your OTP is 482910. Valid for 2 minutes."}'
+  -d '{"sender": "+97150000000", "body": "Dear Ajmal, your OTP is 482910. Valid for 2 minutes."}'
 ```
 
 ---
