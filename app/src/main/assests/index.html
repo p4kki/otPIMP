@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP Forwarder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:         #f8f8ff;
+      --surface:    #161a20;
+      --surface2:   #1e242c;
+      --border:     #2a313b;
+      --text:       #c8d0db;
+      --muted:      #556170;
+      --accent:     #3b82f6;
+      --accent-dim: #1e3a5f;
+      --green:      #22c55e;
+      --green-dim:  #052e16;
+      --amber:      #f59e0b;
+      --amber-dim:  #2d1d00;
+      --red:        #ef4444;
+      --mono:       'IBM Plex Mono', monospace;
+      --sans:       'IBM Plex Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .logo {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.3rem 0.75rem;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .status-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s ease-in-out infinite; }
+    .status-dot.warn { background: var(--amber); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    /* Main layout */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      gap: 1.5rem;
+    }
+
+    /* Name setup card */
+    .setup-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+    }
+    .setup-card h2 {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+    .name-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .name-display {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--green);
+      background: var(--green-dim);
+      border: 1px solid #16a34a40;
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      flex: 1;
+      letter-spacing: 0.04em;
+      display: none;
+    }
+    input[type="text"] {
+      font-family: var(--sans);
+      font-size: 0.95rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.6rem 0.9rem;
+      flex: 1;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    .btn {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-ghost {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 0.5rem 0.8rem;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+
+    /* OTP Alert card */
+    .otp-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .otp-card.waiting .otp-header { background: var(--surface2); }
+    .otp-card.active  { border-color: var(--green); }
+    .otp-card.active  .otp-header { background: var(--green-dim); border-bottom-color: #16a34a40; }
+    .otp-card.expired { border-color: var(--border); }
+    .otp-card.expired .otp-header { background: var(--surface2); }
+
+    .otp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.3s;
+    }
+    .otp-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .otp-card.active .otp-label { color: var(--green); }
+
+    .otp-body {
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+
+    /* Waiting state */
+    .waiting-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .waiting-icon {
+      width: 40px;
+      height: 40px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .waiting-text {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* OTP code display */
+    .otp-code-wrap { display: none; flex-direction: column; align-items: center; gap: 1rem; }
+    .otp-card.active  .otp-code-wrap,
+    .otp-card.expired .otp-code-wrap { display: flex; }
+    .otp-card.active  .waiting-state,
+    .otp-card.expired .waiting-state { display: none; }
+
+    .otp-code {
+      font-family: var(--mono);
+      font-size: 2.8rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      color: var(--green);
+      transition: color 0.4s, opacity 0.4s;
+    }
+    .otp-card.expired .otp-code { color: var(--muted); opacity: 0.5; text-decoration: line-through; }
+
+    .countdown-ring {
+      position: relative;
+      width: 52px;
+      height: 52px;
+    }
+    .countdown-ring svg { transform: rotate(-90deg); }
+    .ring-track { fill: none; stroke: var(--surface2); stroke-width: 4; }
+    .ring-fill  { fill: none; stroke: var(--green); stroke-width: 4; stroke-linecap: round;
+                  stroke-dasharray: 138; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear, stroke 0.4s; }
+    .otp-card.expired .ring-fill { stroke: var(--muted); }
+    .countdown-num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--green);
+      transition: color 0.4s;
+    }
+    .otp-card.expired .countdown-num { color: var(--muted); }
+
+    .expired-msg {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: none;
+      letter-spacing: 0.05em;
+    }
+    .otp-card.expired .expired-msg { display: block; }
+    .otp-card.expired .countdown-ring { display: none; }
+
+    /* Alert flash overlay */
+    .flash {
+      position: fixed;
+      inset: 0;
+      background: var(--green);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999;
+      animation: none;
+    }
+    .flash.trigger { animation: flashpop 0.5s ease-out forwards; }
+    @keyframes flashpop {
+      0%   { opacity: 0.18; }
+      100% { opacity: 0; }
+    }
+
+    /* Log strip */
+    .log-strip {
+      width: 100%;
+      max-width: 380px;
+    }
+    .log-title {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+    .log-entries {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.45rem 0.75rem;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+    }
+    .log-entry .le-code { color: var(--text); font-weight: 600; letter-spacing: 0.1em; }
+    .log-entry .le-name { color: var(--muted); }
+    .log-entry .le-time { color: var(--muted); font-size: 0.65rem; }
+    .log-entry.mine { border-left: 2px solid var(--green); }
+    .log-entries:empty::after {
+      content: 'No OTPs received yet';
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      padding: 0.4rem 0;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Flash overlay on OTP arrival -->
+<div class="flash" id="flash"></div>
+
+<header>
+  <span class="logo">OTP // Forwarder</span>
+  <div class="status-pill">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">connecting</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Name setup -->
+  <div class="setup-card">
+    <h2>Your identity</h2>
+    <div class="name-row">
+      <div class="name-display" id="nameDisplay"></div>
+      <input type="text" id="nameInput" placeholder="Type your name…" autocomplete="off" />
+      <button class="btn btn-primary" id="saveBtn" onclick="saveName()">Save</button>
+      <button class="btn btn-ghost" id="changeBtn" onclick="changeName()" style="display:none">Change</button>
+    </div>
+  </div>
+
+  <!-- OTP display -->
+  <div class="otp-card waiting" id="otpCard">
+    <div class="otp-header">
+      <span class="otp-label" id="otpLabel">Waiting for OTP</span>
+      <span style="font-family:var(--mono);font-size:0.7rem;color:var(--muted)" id="otpTime"></span>
+    </div>
+    <div class="otp-body">
+      <!-- Waiting spinner -->
+      <div class="waiting-state">
+        <div class="waiting-icon"></div>
+        <span class="waiting-text">listening on stream…</span>
+      </div>
+      <!-- OTP arrived -->
+      <div class="otp-code-wrap">
+        <div class="otp-code" id="otpCode">——</div>
+        <div class="countdown-ring">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle class="ring-track" cx="26" cy="26" r="22"/>
+            <circle class="ring-fill" id="ringFill" cx="26" cy="26" r="22"/>
+          </svg>
+          <div class="countdown-num" id="countdownNum">2:00</div>
+        </div>
+        <div class="expired-msg">OTP expired — record kept in log</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent log strip -->
+  <div class="log-strip">
+    <div class="log-title">Recent — this session</div>
+    <div class="log-entries" id="logEntries"></div>
+  </div>
+
+</main>
+
+<footer>internal tool · local network only · no data leaves the office</footer>
+
+<script>
+  // State
+  const STORAGE_KEY = 'otp_user_name';
+  let currentName = localStorage.getItem(STORAGE_KEY) || '';
+  let countdownInterval = null;
+  let es = null;
+  const TOTAL_SECS = 120;
+  const RING_CIRC  = 2 * Math.PI * 22;
+
+  // Name handling
+  function applyName(name) {
+    currentName = name.toLowerCase().trim();
+    document.getElementById('nameDisplay').textContent = name;
+    document.getElementById('nameDisplay').style.display = 'block';
+    document.getElementById('nameInput').style.display  = 'none';
+    document.getElementById('saveBtn').style.display    = 'none';
+    document.getElementById('changeBtn').style.display  = 'inline-flex';
+  }
+
+  function saveName() {
+    const val = document.getElementById('nameInput').value.trim();
+    if (!val) return;
+    localStorage.setItem(STORAGE_KEY, val);
+    applyName(val);
+  }
+
+  function changeName() {
+    document.getElementById('nameDisplay').style.display = 'none';
+    document.getElementById('nameInput').style.display   = 'block';
+    document.getElementById('saveBtn').style.display     = 'inline-flex';
+    document.getElementById('changeBtn').style.display   = 'none';
+    document.getElementById('nameInput').focus();
+  }
+
+  if (currentName) {
+    document.getElementById('nameInput').value = currentName;
+    applyName(currentName);
+  }
+
+  document.getElementById('nameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveName();
+  });
+
+  // Audio alert (generated tone)
+  function playAlert() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [[880, 0, 0.15], [1100, 0.18, 0.15], [880, 0.36, 0.1]].forEach(([freq, start, dur]) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + start + 0.01);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur + 0.05);
+      });
+    } catch (_) {}
+  }
+
+  // Flash overlay
+  function triggerFlash() {
+    const f = document.getElementById('flash');
+    f.classList.remove('trigger');
+    void f.offsetWidth;
+    f.classList.add('trigger');
+  }
+
+  // Countdown ring
+  function startCountdown() {
+    if (countdownInterval) clearInterval(countdownInterval);
+    let secs = TOTAL_SECS;
+
+    function tick() {
+      const pct = secs / TOTAL_SECS;
+      const offset = RING_CIRC * (1 - pct);
+      document.getElementById('ringFill').style.strokeDashoffset = offset;
+      const m = Math.floor(secs / 60);
+      const s = String(secs % 60).padStart(2, '0');
+      document.getElementById('countdownNum').textContent = m + ':' + s;
+      if (secs <= 0) {
+        clearInterval(countdownInterval);
+        document.getElementById('otpCard').className = 'otp-card expired';
+        document.getElementById('otpLabel').textContent = 'OTP expired';
+        document.getElementById('otpTime').textContent  = '';
+      }
+      secs--;
+    }
+
+    tick();
+    countdownInterval = setInterval(tick, 1000);
+  }
+
+  // Show OTP
+  function showOTP(data) {
+    const card = document.getElementById('otpCard');
+    card.className = 'otp-card active';
+
+    document.getElementById('otpCode').textContent  = data.otp_code;
+    document.getElementById('otpLabel').textContent = 'OTP for ' + data.employee_name;
+    document.getElementById('otpTime').textContent  = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+    playAlert();
+    triggerFlash();
+    startCountdown();
+    addLogEntry(data);
+
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Session log
+  function addLogEntry(data) {
+    const container = document.getElementById('logEntries');
+    const mine = currentName && data.employee_name &&
+                 data.employee_name.toLowerCase() === currentName;
+
+    const el = document.createElement('div');
+    el.className = 'log-entry' + (mine ? ' mine' : '');
+    el.innerHTML =
+      '<span class="le-code">' + data.otp_code + '</span>' +
+      '<span class="le-name">' + (data.employee_name || '—') + '</span>' +
+      '<span class="le-time">' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</span>';
+    container.prepend(el);
+
+    while (container.children.length > 10) {
+      container.removeChild(container.lastChild);
+    }
+  }
+
+  // SSE connection
+  function setStatus(state) {
+    const dot  = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    dot.className = 'status-dot';
+    if (state === 'live')   { dot.classList.add('live'); text.textContent = 'live'; }
+    if (state === 'warn')   { dot.classList.add('warn'); text.textContent = 'reconnecting…'; }
+    if (state === 'off')    { text.textContent = 'disconnected'; }
+  }
+
+  function connectSSE() {
+    if (es) es.close();
+    es = new EventSource('/stream');
+
+    es.onopen = () => setStatus('live');
+
+    es.addEventListener('otp', e => {
+      const data = JSON.parse(e.data);
+      addLogEntry(data);
+      if (currentName && data.employee_name &&
+          data.employee_name.toLowerCase().includes(currentName)) {
+        showOTP(data);
+      }
+    });
+
+    es.onerror = () => {
+      setStatus('warn');
+      es.close();
+      setTimeout(connectSSE, 3000);
+    };
+  }
+
+  connectSSE();
+</script>
+</body>
+</html>

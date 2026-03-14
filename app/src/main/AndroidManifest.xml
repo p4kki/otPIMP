@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    AndroidManifest.xml — complete manifest for the self-contained OTP forwarder APK.
+    No Activity. Three components: BootReceiver, OtpForegroundService, SmsReceiver.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.nesto.otpimp">
+
+    <!-- SMS -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+
+    <!-- Required to start a foreground service from BootReceiver on Android 9+ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Required on Android 12+ to start foreground service from background -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+
+    <!-- Boot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- NanoHTTPD opens a server socket on port 8080 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="false"
+        android:label="OTP Forwarder"
+        android:supportsRtl="true">
+
+        <!--
+            BootReceiver: wakes up on device boot, starts the foreground service.
+            exported="true" required on Android 12+ for implicit broadcasts.
+        -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            SmsReceiver: intercepts every incoming SMS.
+            priority="999" ensures we get it before the system SMS app on
+            Samsung/Xiaomi ROMs that intercept broadcasts early.
+            exported="true" required on Android 12+.
+        -->
+        <receiver
+            android:name=".SmsReceiver"
+            android:exported="true"
+            android:priority="999">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            OtpForegroundService: long-running service that hosts NanoHTTPD.
+            foregroundServiceType="connectedDevice" satisfies Android 14's
+            requirement that foreground services declare their type.
+        -->
+        <service
+            android:name=".OtpForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+    </application>
+
+</manifest>
