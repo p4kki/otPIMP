@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "com.nesto.otpimp"
     compileSdk {
-        version = release(34)
+        version = release(36)
     }
 
     defaultConfig {
