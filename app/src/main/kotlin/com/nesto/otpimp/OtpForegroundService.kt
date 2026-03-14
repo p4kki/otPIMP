@@ -12,9 +12,7 @@ import androidx.core.app.NotificationCompat
 class OtpForegroundService : Service() {
 
     companion object {
-    var isRunning = false
-    }
-    companion object {
+        var isRunning = false
         const val CHANNEL_ID = "otp_server_channel"
         const val NOTIFICATION_ID = 1
     }
