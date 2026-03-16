@@ -1,3 +1,7 @@
+# Android
+local.properties
+app/build/
+
 # Gradle
 .gradle/
 build/
