@@ -96,10 +96,13 @@ class OtpForegroundService : Service() {
             val locator = ServiceLocator.getInstance(applicationContext)
             
             httpServer = OtpHttpServer(
+                context = applicationContext,    
                 port = Constants.SERVER_PORT,
                 otpRepository = locator.otpRepository,
                 getEmployeesUseCase = locator.getEmployeesUseCase,
-                serviceState = serviceState
+                serviceState = serviceState,
+                processIncomingSmsUseCase = locator.processIncomingSmsUseCase
+
             )
             httpServer?.start()
             

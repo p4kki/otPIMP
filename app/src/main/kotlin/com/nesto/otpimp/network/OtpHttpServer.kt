@@ -1,7 +1,9 @@
 package com.nesto.otpimp.network
 
+import android.content.Context
 import com.nesto.otpimp.data.repository.OtpRepository
 import com.nesto.otpimp.domain.usecase.GetEmployeesUseCase
+import com.nesto.otpimp.domain.usecase.ProcessIncomingSmsUseCase
 import com.nesto.otpimp.network.handlers.*
 import com.nesto.otpimp.service.ServiceState
 import com.nesto.otpimp.util.Constants
@@ -10,10 +12,12 @@ import fi.iki.elonen.NanoHTTPD
 import java.io.IOException
 
 class OtpHttpServer(
+    private val context: Context,
     private val port: Int = Constants.SERVER_PORT,
     private val otpRepository: OtpRepository,
     private val getEmployeesUseCase: GetEmployeesUseCase,
-    private val serviceState: ServiceState
+    private val serviceState: ServiceState,
+    private val processIncomingSmsUseCase: ProcessIncomingSmsUseCase
 ) : NanoHTTPD(port) {
     
     companion object {

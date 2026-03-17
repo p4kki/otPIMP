@@ -20,6 +20,7 @@ object Constants {
         const val STREAM = "/stream"
         const val HEALTH = "/health"
         const val EMPLOYEES = "/employees"
+        const val SMS = "/sms"
         const val HISTORY = "/history"
     }
     
