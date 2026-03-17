@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class OtpForegroundService : Service() {
@@ -15,14 +16,21 @@ class OtpForegroundService : Service() {
         var isRunning = false
         const val CHANNEL_ID = "otp_server_channel"
         const val NOTIFICATION_ID = 1
+        private const val TAG = "OtpForegroundService"
     }
 
     override fun onCreate() {
         super.onCreate()
         isRunning = true
-        createNotificationChannel()
-        startForeground(NOTIFICATION_ID, createNotification())
-        OtpServer.start()
+        try {
+            createNotificationChannel()
+            startForeground(NOTIFICATION_ID, createNotification())
+            OtpServer.start(this)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start: ${e.message}", e)
+            isRunning = false
+            stopSelf()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

@@ -11,12 +11,17 @@ A single Android tablet with a SIM card receives OTP SMS messages from a databas
 ```
 [Database System] → SMS → [Android Tablet (SIM)]
                               │
-                              ├─ Kotlin SmsReceiver → OtpForegroundService (NanoHTTPD on port 8080)
-                              │                                          │
-                              │                                          ├── SMS Parser
-                              │                                          ├── SQLite Database
-                              │                                          └── SSE Endpoint
-                              │
+                              └─ SmsReceiver → OtpForegroundService
+                                                     │
+                                    ┌────────────────┼────────────────┐
+                                    │                │                │
+                               data/           domain/         network/
+                            (Room DB)        (Use Cases)    (NanoHTTPD)
+                                                                     │
+                                                      ┌──────────────┼──────────────┐
+                                                      ▼              ▼              ▼
+                                                   /stream       /health         /sms
+
 [Office Wi-Fi — local network only]
                               │
           ┌───────────────────┴───────────────────┐
@@ -25,26 +30,30 @@ A single Android tablet with a SIM card receives OTP SMS messages from a databas
    http://<tablet-ip>:8080                  (Future: Flutter app in beta)
 ```
 
-## Features (Alpha)
+## Features
 
 - Real-time OTP forwarding via SSE
 - Employee identification by name (stored in browser localStorage)
 - Audio alert + visual flash on OTP arrival
 - 2-minute countdown timer with visual ring
 - Automatic server start on device boot
-- SMS permission handling
-- SQLite logging (permanent, never deleted)
-- Failed parse logging for manual review
+- SMS permission handling with live status
+- Room database for message persistence
+- Built-in log viewer in app
+- Service state tracking (messages received/broadcast)
+- POST endpoint for testing without SMS
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-------------|
-| Backend | FastAPI + SQLite (Android app hosts NanoHTTPD) |
+| Backend | NanoHTTPD (embedded in Android app) |
+| Database | Room (SQLite) |
 | SMS Bridge | Kotlin BroadcastReceiver |
-| Web Server | NanoHTTPD (embedded in Android app) |
+| Architecture | Clean Architecture (data/domain/network layers) |
 | Frontend | Vanilla JS (single HTML file, served statically) |
 | Realtime | Server-Sent Events (SSE) |
+| Build | Gradle, KSP, ViewBinding |
 
 ## Project Structure
 
@@ -53,27 +62,81 @@ otpimp/
 ├── app/
 │   ├── src/main/
 │   │   ├── kotlin/com/nesto/otpimp/
-│   │   │   ├── MainActivity.kt         # UI for status/permissions
-│   │   │   ├── OtpForegroundService.kt # Foreground service with web server
-│   │   │   ├── OtpServer.kt            # NanoHTTPD server + SSE handling
-│   │   │   ├── SmsReceiver.kt          # BroadcastReceiver for incoming SMS
-│   │   │   └── BootReceiver.kt         # Starts service on device boot
+│   │   │   ├── OtpApplication.kt         # Application class
+│   │   │   ├── MainActivity.kt          # UI with View Binding
+│   │   │   ├── di/
+│   │   │   │   └── ServiceLocator.kt     # Dependency injection
+│   │   │   ├── data/
+│   │   │   │   ├── local/                # Room DB (OtpDatabase, OtpDao, OtpEntity)
+│   │   │   │   ├── model/                # Data models (OtpMessage, ParsedSms, Result)
+│   │   │   │   └── repository/           # Repository pattern
+│   │   │   ├── domain/
+│   │   │   │   ├── parser/               # SMS parsing logic
+│   │   │   │   └── usecase/              # Business logic
+│   │   │   ├── network/
+│   │   │   │   ├── OtpHttpServer.kt      # NanoHTTPD server
+│   │   │   │   ├── SseConnectionManager.kt
+│   │   │   │   └── handlers/             # HTTP request handlers
+│   │   │   ├── receiver/
+│   │   │   │   ├── BootReceiver.kt       # Starts service on boot
+│   │   │   │   └── SmsReceiver.kt        # Incoming SMS handler
+│   │   │   ├── service/
+│   │   │   │   ├── OtpForegroundService.kt
+│   │   │   │   └── ServiceState.kt       # Runtime state tracking
+│   │   │   └── util/
+│   │   │       ├── Logger.kt             # In-app logging
+│   │   │       ├── NetworkUtils.kt       # IP address utilities
+│   │   │       └── Constants.kt
+│   │   ├── res/layout/
+│   │   │   └── activity_main.xml         # ConstraintLayout with stats
 │   │   └── AndroidManifest.xml
 │   └── build.gradle.kts
 ├── frontend/
 │   └── index.html                       # Employee UI (served by app)
-├── backend/
-│   ├── main.py                          # FastAPI version (Termux alternative)
-│   └── otp_log.db                      # SQLite database
-├── build.gradle.kts
-├── settings.gradle.kts
-└── CLAUDE.md                            # Project documentation
+└── README.md
+```
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Serve HTML frontend |
+| `/stream` | GET | SSE event stream for real-time OTPs |
+| `/health` | GET | Server health status, subscriber count |
+| `/sms` | POST | Submit SMS for testing (no SIM required) |
+
+### POST /sms Example
+
+```bash
+curl -X POST http://<tablet-ip>:8080/sms \
+  -H "Content-Type: application/json" \
+  -d '{"sender": "+971500000000", "body": "Ajmal, your OTP is 482910"}'
+```
+
+### Response
+
+```json
+{
+  "status": "ok",
+  "employee_name": "Ajmal",
+  "otp_code": "482910"
+}
+```
+
+### GET /health Response
+
+```json
+{
+  "status": "ok",
+  "subscribers": 5,
+  "employees": "Ajmal,Fatima,Omar,Sara,Hassan,Khalid,Mariam,Yousuf,Layla,Ali"
+}
 ```
 
 ## Prerequisites
 
-- Android 8.1+ (API 27)
-- Termux or Android Studio for building
+- Android 8.0+ (API 26)
+- Android Studio for building
 - Wi-Fi network (no internet required for operation)
 
 ## Building
@@ -95,20 +158,27 @@ The APK will be at `app/build/outputs/apk/debug/app-debug.apk`
 ## Running
 
 1. Install the APK on the Android tablet
-2. Grant SMS permissions when prompted
+2. Grant SMS and notification permissions when prompted
 3. The server starts automatically on port 8080
-4. Find the tablet's IP address in the app (or from Settings → Wi-Fi)
+4. Find the tablet's IP address in the app UI
 5. Employees visit `http://<tablet-ip>:8080` in their browser
 
-## Testing Without SMS
+## App Features
 
-Send a test SMS via the app's built-in endpoint:
+### Main Activity
 
-```bash
-curl -X POST http://localhost:8080/sms \
-  -H "Content-Type: application/json" \
-  -d '{"sender": "+971500000000", "body": "Ajmal, your OTP is 482910"}'
-```
+- **Status**: Shows if server is running
+- **IP Address**: Displays local Wi-Fi IP with port
+- **Permissions**: Shows SMS permission status
+- **Stats**: Live count of messages received and broadcast
+- **Toggle**: Start/stop the server
+- **View Logs**: Dialog showing recent app logs (up to 100 entries)
+
+### Service State
+
+The app tracks runtime statistics:
+- Messages received via SMS
+- Messages broadcast to SSE clients
 
 ## Employee Workflow
 
@@ -128,12 +198,25 @@ Hardcoded in the app: Ajmal, Fatima, Omar, Sara, Hassan, Khalid, Mariam, Yousuf,
 - SMS permissions required for operation
 - `android:allowBackup="false"` prevents data leakage
 
+## Testing
+
+### Unit Tests
+
+```bash
+./gradlew test
+```
+
+### Testing Without SMS
+
+Use the POST endpoint or send a test SMS via the debug tools.
+
 ## Beta (Planned)
 
 - JWT authentication with user/admin roles
 - Admin panel for viewing full log
 - Flutter Android app for employees
 - Employee management UI
+- Multiple SIM support
 
 ## License
 
