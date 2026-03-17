@@ -34,10 +34,5 @@ data class OtpMessage(
     
     fun toJsonString(): String = toJson().toString()
     
-    fun toSseEvent(): String = buildString {
-        append("id: $id\n")
-        append("event: otp\n")
-        append("data: ${toJsonString()}\n")
-        append("\n")
-    }
+    fun toSseEvent(): String = "event: otp\ndata: ${toJsonString()}\n\n"
 }

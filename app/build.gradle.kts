@@ -18,7 +18,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("int",     "SERVER_PORT",                "8080")
-        buildConfigField("int",     "SSE_HEARTBEAT_INTERVAL_MS",  "30000")
+        buildConfigField("int",     "SSE_HEARTBEAT_INTERVAL_MS",  "15000")
         buildConfigField("int",     "MAX_SSE_CONNECTIONS",        "50")
     }
 

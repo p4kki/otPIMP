@@ -65,7 +65,11 @@ GET /health    - Server health and stats
 GET /employees - List of known employees</pre>
                     </div>
                     
-                    <h2 style="margin: 20px 0 10px; color: #888; font-size: 14px;">RECENT MESSAGES</h2>
+                    <h2 style="margin: 20px 0 10px; color: #888; font-size: 14px;">
+                        RECENT MESSAGES
+                        <button onclick="copyAll()" style="margin-left: 10px; background: #16213e; border: 1px solid #00d9ff; color: #00d9ff; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Copy All</button>
+                        <button onclick="clearMessages()" style="margin-left: 5px; background: #16213e; border: 1px solid #ff4757; color: #ff4757; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear</button>
+                    </h2>
                     <div id="messages">
                         <div class="empty">Waiting for OTP messages...</div>
                     </div>
@@ -107,7 +111,7 @@ GET /employees - List of known employees</pre>
                         const card = document.createElement('div');
                         card.className = 'card otp';
                         card.innerHTML = `
-                            <h3>OTP Received</h3>
+                            <h3>OTP Received <button onclick="copyCode(this, '${'$'}{data.otp_code || ''}')" style="float: right; background: transparent; border: 1px solid #00d9ff; color: #00d9ff; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 10px;">Copy</button></h3>
                             <div class="otp-code">${'$'}{data.otp_code || '----'}</div>
                             <div class="meta">
                                 ${'$'}{data.employee_name ? `<span class="employee">${'$'}{data.employee_name}</span> • ` : ''}
@@ -121,6 +125,26 @@ GET /employees - List of known employees</pre>
                         while (messagesEl.children.length > 50) {
                             messagesEl.removeChild(messagesEl.lastChild);
                         }
+                    }
+                    
+                    function clearMessages() {
+                        messagesEl.innerHTML = '<div class="empty">Waiting for OTP messages...</div>';
+                        messageCount = 0;
+                    }
+                    
+                    function copyAll() {
+                        const codes = Array.from(messagesEl.querySelectorAll('.otp-code'))
+                            .map(el => el.textContent)
+                            .join(', ');
+                        if (codes) {
+                            navigator.clipboard.writeText(codes);
+                        }
+                    }
+                    
+                    function copyCode(btn, code) {
+                        navigator.clipboard.writeText(code);
+                        btn.textContent = 'Copied!';
+                        setTimeout(() => btn.textContent = 'Copy', 1000);
                     }
                     
                     connect();

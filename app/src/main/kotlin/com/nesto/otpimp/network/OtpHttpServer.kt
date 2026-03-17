@@ -9,7 +9,28 @@ import com.nesto.otpimp.service.ServiceState
 import com.nesto.otpimp.util.Constants
 import com.nesto.otpimp.util.Logger
 import fi.iki.elonen.NanoHTTPD
+import fi.iki.elonen.NanoHTTPD.Method
 import java.io.IOException
+import org.json.JSONObject
+
+sealed class Route(val method: Method, val path: String) {
+    object Root : Route(Method.GET, "/")
+    object Stream : Route(Method.GET, "/stream")
+    object Health : Route(Method.GET, "/health")
+    object Employees : Route(Method.GET, "/employees")
+    object PostSms : Route(Method.POST, "/sms")
+
+    companion object {
+        operator fun invoke(method: Method, path: String): Route? = when {
+            method == Method.GET && path == "/" -> Root
+            method == Method.GET && path == "/stream" -> Stream
+            method == Method.GET && path == "/health" -> Health
+            method == Method.GET && path == "/employees" -> Employees
+            method == Method.POST && path == "/sms" -> PostSms
+            else -> null
+        }
+    }
+}
 
 class OtpHttpServer(
     private val context: Context,
@@ -22,6 +43,7 @@ class OtpHttpServer(
     
     companion object {
         private const val TAG = "OtpHttpServer"
+        private const val SOCKET_READ_TIMEOUT = 0
     }
     
     private val sseManager = SseConnectionManager(otpRepository.otpStream)
@@ -30,6 +52,7 @@ class OtpHttpServer(
     private val streamHandler = StreamHandler(sseManager)
     private val healthHandler = HealthHandler(sseManager, serviceState)
     private val employeesHandler = EmployeesHandler(getEmployeesUseCase)
+    private val smsPostHandler = SmsPostHandler(processIncomingSmsUseCase)
     
     override fun start() {
         try {
@@ -55,13 +78,13 @@ class OtpHttpServer(
         
         // Add CORS headers to all responses
         return try {
-            when {
-                method == Method.OPTIONS -> handleCors()
-                uri == Constants.Endpoints.ROOT -> rootHandler.handle()
-                uri == Constants.Endpoints.STREAM -> streamHandler.handle()
-                uri == Constants.Endpoints.HEALTH -> healthHandler.handle()
-                uri == Constants.Endpoints.EMPLOYEES -> employeesHandler.handle()
-                else -> handleNotFound(uri)
+            when (Route(method, uri)) {
+                Route.Root -> rootHandler.handle()
+                Route.Stream -> streamHandler.handle()
+                Route.Health -> healthHandler.handle()
+                Route.Employees -> employeesHandler.handle()
+                Route.PostSms -> smsPostHandler.handle(session)
+                null -> if (method == Method.OPTIONS) handleCors() else handleNotFound(uri)
             }.apply {
                 addCorsHeaders(this)
             }
@@ -77,26 +100,32 @@ class OtpHttpServer(
     }
     
     private fun handleNotFound(uri: String): Response {
-        val response = """{"error": "Not found", "path": "$uri"}"""
+        val json = JSONObject().apply {
+            put("error", "Not found")
+            put("path", uri)
+        }
         return newFixedLengthResponse(
             Response.Status.NOT_FOUND,
             Constants.MimeTypes.JSON,
-            response
+            json.toString()
         )
-    }
+        }
     
     private fun handleError(e: Exception): Response {
-        val response = """{"error": "Internal server error", "message": "${e.message}"}"""
+        val json = JSONObject().apply {
+            put("error", "Internal server error")
+            put("message", e.message ?: "Unknown error")
+        }
         return newFixedLengthResponse(
             Response.Status.INTERNAL_ERROR,
             Constants.MimeTypes.JSON,
-            response
+            json.toString()
         )
     }
     
     private fun addCorsHeaders(response: Response) {
         response.addHeader(Constants.Headers.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        response.addHeader(Constants.Headers.ACCESS_CONTROL_ALLOW_METHODS, "GET, OPTIONS")
+        response.addHeader(Constants.Headers.ACCESS_CONTROL_ALLOW_METHODS, "GET,POST, OPTIONS")
         response.addHeader(Constants.Headers.ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type, Cache-Control")
     }
 }

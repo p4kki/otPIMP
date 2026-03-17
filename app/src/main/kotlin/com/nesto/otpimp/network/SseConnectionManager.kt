@@ -5,14 +5,10 @@ import com.nesto.otpimp.util.Constants
 import com.nesto.otpimp.util.Logger
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.SharedFlow
-import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
-/**
- * Manages Server-Sent Events (SSE) connections and broadcasts.
- */
 class SseConnectionManager(
     private val otpStream: SharedFlow<OtpMessage>,
     private val maxConnections: Int = Constants.MAX_SSE_CONNECTIONS,
@@ -29,10 +25,9 @@ class SseConnectionManager(
     
     data class SseConnection(
         val id: String,
-        val outputStream: OutputStream,
+        val stream: SseOutputStream,  // Changed from OutputStream
         val connectedAt: Long = System.currentTimeMillis(),
-        var lastActivityAt: Long = System.currentTimeMillis(),
-        val job: Job
+        var lastActivityAt: Long = System.currentTimeMillis()
     )
     
     data class Stats(
@@ -47,30 +42,20 @@ class SseConnectionManager(
     }
     
     /**
-     * Register a new SSE connection.
-     * Returns the connection ID or null if max connections reached.
+     * Create a new SSE connection and return both the ID and the InputStream for NanoHTTPD.
      */
-    fun registerConnection(outputStream: OutputStream): String? {
+    fun createConnection(): Pair<String, SseOutputStream>? {
         if (activeCount.get() >= maxConnections) {
             Logger.w(TAG, "Max connections ($maxConnections) reached, rejecting new connection")
             return null
         }
         
         val connectionId = "sse-${connectionIdCounter.incrementAndGet()}"
-        
-        val job = scope.launch {
-            // Keep connection alive until cancelled
-            try {
-                awaitCancellation()
-            } finally {
-                removeConnection(connectionId)
-            }
-        }
+        val stream = SseOutputStream()
         
         val connection = SseConnection(
             id = connectionId,
-            outputStream = outputStream,
-            job = job
+            stream = stream
         )
         
         connections[connectionId] = connection
@@ -79,25 +64,19 @@ class SseConnectionManager(
         Logger.i(TAG, "New SSE connection: $connectionId (active: ${activeCount.get()})")
         
         // Send initial comment to establish connection
-        sendToConnection(connection, ": connected\n\n")
+        stream.write(": connected\n\n")
         
-        return connectionId
+        return connectionId to stream
     }
     
-    /**
-     * Remove a connection (called when client disconnects or on error).
-     */
     fun removeConnection(connectionId: String) {
         connections.remove(connectionId)?.let { connection ->
-            connection.job.cancel()
+            connection.stream.closeStream()
             activeCount.decrementAndGet()
             Logger.i(TAG, "SSE connection removed: $connectionId (active: ${activeCount.get()})")
         }
     }
     
-    /**
-     * Get current connection statistics.
-     */
     fun getStats(): Stats {
         val now = System.currentTimeMillis()
         val oldest = connections.values.minOfOrNull { now - it.connectedAt }
@@ -109,36 +88,25 @@ class SseConnectionManager(
         )
     }
     
-    /**
-     * Broadcast a message to all connected clients.
-     */
     private fun broadcast(message: OtpMessage) {
         val sseEvent = message.toSseEvent()
         val deadConnections = mutableListOf<String>()
         
         connections.forEach { (id, connection) ->
-            if (!sendToConnection(connection, sseEvent)) {
+            try {
+                connection.stream.write(sseEvent)
+                connection.lastActivityAt = System.currentTimeMillis()
+                Logger.v(TAG, "Sent OTP to $id")
+            } catch (e: Exception) {
+                Logger.d(TAG, "Failed to send to $id: ${e.message}")
                 deadConnections.add(id)
             }
         }
         
-        // Clean up dead connections
         deadConnections.forEach { removeConnection(it) }
         
         if (connections.isNotEmpty()) {
             Logger.d(TAG, "Broadcast OTP to ${connections.size} clients")
-        }
-    }
-    
-    private fun sendToConnection(connection: SseConnection, data: String): Boolean {
-        return try {
-            connection.outputStream.write(data.toByteArray(Charsets.UTF_8))
-            connection.outputStream.flush()
-            connection.lastActivityAt = System.currentTimeMillis()
-            true
-        } catch (e: Exception) {
-            Logger.d(TAG, "Failed to send to ${connection.id}: ${e.message}")
-            false
         }
     }
     
@@ -159,15 +127,19 @@ class SseConnectionManager(
                 val heartbeat = ": heartbeat ${System.currentTimeMillis()}\n\n"
                 
                 connections.forEach { (id, connection) ->
-                    if (!sendToConnection(connection, heartbeat)) {
+                    try {
+                        connection.stream.write(heartbeat)
+                        connection.lastActivityAt = System.currentTimeMillis()
+                    } catch (e: Exception) {
+                        Logger.d(TAG, "Heartbeat failed for $id: ${e.message}")
                         deadConnections.add(id)
                     }
                 }
                 
                 deadConnections.forEach { removeConnection(it) }
                 
-                if (deadConnections.isNotEmpty()) {
-                    Logger.d(TAG, "Heartbeat removed ${deadConnections.size} dead connections")
+                if (connections.isNotEmpty()) {
+                    Logger.v(TAG, "Heartbeat sent to ${connections.size} connections")
                 }
             }
         }
@@ -176,6 +148,7 @@ class SseConnectionManager(
     fun shutdown() {
         Logger.i(TAG, "Shutting down SSE manager")
         scope.cancel()
+        connections.values.forEach { it.stream.closeStream() }
         connections.clear()
         activeCount.set(0)
     }
