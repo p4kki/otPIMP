@@ -48,7 +48,7 @@ class OtpHttpServer(
     
     private val sseManager = SseConnectionManager(otpRepository.otpStream)
     
-    private val rootHandler = RootHandler()
+    private val rootHandler = RootHandler(context)
     private val streamHandler = StreamHandler(sseManager)
     private val healthHandler = HealthHandler(sseManager, serviceState)
     private val employeesHandler = EmployeesHandler(getEmployeesUseCase)

@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OTP Forwarder</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:         #f8f8ff;
@@ -21,8 +19,8 @@
       --amber:      #f59e0b;
       --amber-dim:  #2d1d00;
       --red:        #ef4444;
-      --mono:       'IBM Plex Mono', monospace;
-      --sans:       'IBM Plex Sans', sans-serif;
+      --mono:       ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans:       -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -517,7 +515,6 @@
     playAlert();
     triggerFlash();
     startCountdown();
-    addLogEntry(data);
 
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
