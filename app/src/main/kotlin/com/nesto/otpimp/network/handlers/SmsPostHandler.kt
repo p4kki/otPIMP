@@ -5,6 +5,7 @@ import com.nesto.otpimp.util.Constants
 import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoHTTPD.Response.Status
 import fi.iki.elonen.NanoHTTPD.IHTTPSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 
@@ -28,7 +29,7 @@ class SmsPostHandler(
                 return errorResponse(Status.BAD_REQUEST, "Missing 'body' field")
             }
             
-            val result = runBlocking {
+            val result = runBlocking(Dispatchers.IO){
                 processIncomingSmsUseCase(sender, body)
             }
             

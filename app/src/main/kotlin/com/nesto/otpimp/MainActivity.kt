@@ -237,7 +237,7 @@ class MainActivity : AppCompatActivity() {
     private fun showLogs() {
         val logs = Logger.getLogsFormatted(100)
 
-        MaterialAlertDialogBuilder(this, R.style.LogsDialogTheme)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Recent Logs")
             .setMessage(logs.ifEmpty { "No logs yet" })
             .setPositiveButton("Close", null)

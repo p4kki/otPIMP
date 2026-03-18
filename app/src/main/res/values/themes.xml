@@ -17,21 +17,9 @@
         <item name="android:textSize">20sp</item>
     </style>
     
-    <style name="LogsDialogTheme" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="android:background">@color/card_background</item>
-        <item name="android:textColor">@color/text_primary</item>
-        <item name="materialAlertDialogTitleTextStyle">@style/LogsDialogTitle</item>
-        <item name="materialAlertDialogBodyTextStyle">@style/LogsDialogBody</item>
-    </style>
-    
-    <style name="LogsDialogTitle" parent="MaterialAlertDialog.Material3.Title.Text">
-        <item name="android:textColor">@color/text_primary</item>
-    </style>
-    
-    <style name="LogsDialogBody" parent="MaterialAlertDialog.Material3.Body.Text">
-        <item name="android:textColor">@color/text_secondary</item>
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textSize">12sp</item>
+    <style name="LogsDialogTheme" parent="@style/ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/card_background</item>
+        <item name="colorOnSurface">@color/text_primary</item>
     </style>
     
 </resources>
