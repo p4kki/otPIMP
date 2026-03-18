@@ -19,7 +19,7 @@ class RootHandler(private val context: Context) {
         } catch (e: Exception) {
             return NanoHTTPD.newFixedLengthResponse(
                 Status.INTERNAL_ERROR,
-                Constants.MimeTypes.TEXT,
+                "text/plain",
                 "Failed to load index.html: ${e.message}"
             )
         }
